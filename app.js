@@ -1,36 +1,27 @@
 /* 100Hz 防晕动 — 应用逻辑
-   播放 100 Hz 纯音，帮助缓解晕动症。
+   播放 100 Hz 纯音；原理与剂量来自 Gu et al., Environ Health Prev Med 2025;30.
+   （100 Hz、80–85 dB(Z)、出发前 1 分钟、双耳同时）
 
-   音频走 <audio> 元素（iOS 后台/锁屏可继续播放）。
-   音频文件自带 0.45s 淡入 / 0.5s 淡出：iOS 不允许网页设置媒体元素音量，
-   硬起播会有一声“嗒”，所以淡入淡出做在音频文件里，而不是用 JS 改音量。
-   声压级：优先读系统音量（部分平台会把系统音量映射到媒体元素上），
-   读不到时（iOS 通常如此）改为提示用音量键调节，不显示假数字。 */
+   关于“起播爆音”：iOS 不允许网页设置媒体元素音量，也没有任何 JS 淡入手段，
+   唯一可靠的办法是让每次起播都落在音频文件开头的静音区：
+   audio/100hz.mp3 = 0.3s 数字静音 + 0.7s 淡入 + 纯音 + 0.6s 淡出。
+   因此暂停/结束时把播放位置归零，起播永远从静音开始。 */
 
 (function () {
   "use strict";
 
-  var MAX_SPL = 85;          // 以扬声器满音量约 85 dB SPL 为参考
-  var MIN_SPL_SCALE = 60;    // 进度条量程
-  var MAX_SPL_SCALE = 100;
-  var STORE_KEY = "hz100.prefs.v1";
+  var STORE_KEY = "hz100.prefs.v2";
+  var DEFAULT_PRESET = 60;   // 论文方案：1 分钟
 
   var $ = function (id) { return document.getElementById(id); };
 
   var audio = $("tone");
-  var volProbe = $("volProbe");
   var playBtn = $("playBtn");
   var playLabel = $("playLabel");
   var timeValue = $("timeValue");
   var timeUnit = $("timeUnit");
   var timeLabel = $("timeLabel");
   var timeBar = $("timeBar");
-  var levelValue = $("levelValue");
-  var levelTag = $("levelTag");
-  var splValue = $("splValue");
-  var splUnit = $("splUnit");
-  var meterFill = $("meterFill");
-  var levelHint = $("levelHint");
   var themeBtn = $("themeBtn");
   var helpBtn = $("helpBtn");
   var sheet = $("sheet");
@@ -39,19 +30,15 @@
   var a2hsClose = $("a2hsClose");
 
   var state = {
-    preset: 40,        // 秒；0 = 循环
+    preset: DEFAULT_PRESET,   // 秒；0 = 循环
     playing: false,
     paused: false,
-    elapsedBase: 0,    // 已累计播放秒数（暂停时结算）
-    startedAt: null,   // 本次播放开始的墙上时钟
+    elapsedBase: 0,           // 已累计播放秒数（暂停时结算）
+    startedAt: null,          // 本次播放开始的墙上时钟
     wakeLock: null,
     tickerId: null,
-    rafId: null,
-    booted: false
+    rafId: null
   };
-
-  // null = 平台不开放系统音量读数
-  var systemVolume = null;
 
   /* ---------------- 偏好存储 ---------------- */
 
@@ -74,65 +61,13 @@
     } catch (e) { /* 忽略 */ }
   }
 
-  /* ---------------- 系统音量 ---------------- */
+  /* ---------------- 音频起点：杜绝爆音 ---------------- */
 
-  function volumeOf(el) {
-    if (!el) return null;
-    var v = el.volume;
-    return typeof v === "number" && isFinite(v) && v >= 0 && v <= 1 ? v : null;
+  function parkAtSilence() {
+    try {
+      if (audio.currentTime > 0.01) audio.currentTime = 0;
+    } catch (e) { /* 忽略 */ }
   }
-
-  // 默认音量就是 1：若读到小于 1，或观察到音量变化，说明平台把系统音量映射到了元素上
-  function refreshSystemVolume() {
-    if (systemVolume !== null) return true;
-    var candidates = [volumeOf(audio), volumeOf(volProbe)];
-    for (var i = 0; i < candidates.length; i++) {
-      var v = candidates[i];
-      if (v !== null && v < 0.999) { systemVolume = v; return true; }
-    }
-    return false;
-  }
-
-  function volumeToSpl(v) {
-    if (v <= 0.001) return 0;
-    return MAX_SPL + 20 * Math.log10(v);
-  }
-
-  function renderLevel() {
-    var readable = refreshSystemVolume();
-
-    if (!readable) {
-      levelValue.classList.add("is-guidance");
-      splValue.textContent = "请用音量键调节";
-      splUnit.textContent = "";
-      levelTag.textContent = "系统音量不可读";
-      meterFill.style.width = "0%";
-      levelHint.textContent = "iOS 不向网页开放系统音量读数：请用侧边音量键调到刚好盖过环境噪音的水平（建议声压级 80~85 dB）。在支持读取系统音量的设备上，这里会随音量键实时变化。";
-      return;
-    }
-
-    var spl = volumeToSpl(systemVolume);
-    levelValue.classList.remove("is-guidance");
-    splValue.textContent = systemVolume <= 0.001 ? "--" : String(Math.round(spl));
-    splUnit.textContent = systemVolume <= 0.001 ? "" : "dB";
-    levelTag.textContent = "跟随系统音量";
-    var pct = Math.min(100, Math.max(0, (spl - MIN_SPL_SCALE) / (MAX_SPL_SCALE - MIN_SPL_SCALE) * 100));
-    meterFill.style.width = (systemVolume <= 0.001 ? 0 : pct) + "%";
-    levelHint.textContent = "实时跟随手机音量键更新（满音量按约 " + MAX_SPL + " dB 估算）。";
-  }
-
-  ["volumechange", "volumeChanged"].forEach(function (evt) {
-    audio.addEventListener(evt, function () {
-      var v = volumeOf(audio);
-      if (v !== null) { systemVolume = v; renderLevel(); }
-    });
-    if (volProbe) {
-      volProbe.addEventListener(evt, function () {
-        var v = volumeOf(volProbe);
-        if (v !== null) { systemVolume = v; renderLevel(); }
-      });
-    }
-  });
 
   /* ---------------- 计时显示 ---------------- */
 
@@ -149,7 +84,7 @@
 
   function fmt(seconds) {
     seconds = Math.max(0, Math.ceil(seconds));
-    if (state.preset >= 60 || seconds >= 60) {
+    if (seconds >= 60) {
       var m = Math.floor(seconds / 60);
       var s = seconds % 60;
       return m + ":" + (s < 10 ? "0" : "") + s;
@@ -168,7 +103,7 @@
     }
     var left = state.playing || state.paused ? remainingSeconds() : state.preset;
     timeValue.textContent = fmt(left);
-    timeUnit.textContent = state.preset >= 60 ? "" : "s";
+    timeUnit.textContent = state.preset >= 60 || left >= 60 ? "" : "s";
     timeLabel.textContent = state.playing ? "剩余时间" : (state.paused ? "已暂停" : "本次时长");
     timeBar.style.width = Math.min(100, Math.max(0, (1 - left / state.preset) * 100)) + "%";
   }
@@ -199,6 +134,7 @@
   }
 
   function play() {
+    if (audio.paused) parkAtSilence();   // 永远从文件开头的静音区起播
     var p = audio.play();
     if (p && typeof p.then === "function") {
       p.then(function () {
@@ -230,6 +166,7 @@
     state.paused = true;
     stopTicker();
     audio.pause();
+    parkAtSilence();                     // 归零，下次起播仍在静音区
     document.body.classList.remove("is-playing");
     playLabel.textContent = "继续播放";
     renderTimer();
@@ -244,6 +181,7 @@
     state.startedAt = null;
     stopTicker();
     audio.pause();
+    parkAtSilence();
     document.body.classList.remove("is-playing");
     playLabel.textContent = "开始播放";
     renderTimer();
@@ -260,7 +198,7 @@
     state.startedAt = null;
     stopTicker();
     audio.pause();
-    audio.currentTime = 0;
+    try { audio.currentTime = 0; } catch (e) { /* 忽略 */ }
     document.body.classList.remove("is-playing");
     playLabel.textContent = "开始播放";
     renderTimer();
@@ -308,7 +246,6 @@
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState !== "visible") return;
     if (state.playing) { requestWakeLock(); updateTick(); }
-    renderLevel();
   });
 
   /* ---------------- UI 辅助 ---------------- */
@@ -341,11 +278,8 @@
     Array.prototype.forEach.call(document.querySelectorAll(".chip"), function (c) {
       c.classList.toggle("is-active", Number(c.dataset.sec) === sec);
     });
-    if (state.playing || state.paused) {
-      state.paused = false;
-      audio.currentTime = 0;   // 回到文件开头（自带淡入），避免中途起播的爆音
-      if (!state.playing) play();
-    }
+    // 播放中切换时长不打断当前声音（中途 seek 会爆音），暂停时才归零
+    if (!state.playing) parkAtSilence();
     renderTimer();
     savePrefs();
   }
@@ -388,8 +322,6 @@
     if (state.preset > 0 && state.playing) finishSession();
   });
 
-  audio.addEventListener("playing", function () { setTimeout(renderLevel, 300); });
-
   document.addEventListener("gesturestart", function (e) { e.preventDefault(); });
 
   /* ---------------- 启动 ---------------- */
@@ -409,6 +341,18 @@
     }
   }
 
+  function registerServiceWorker() {
+    if (!("serviceWorker" in navigator) || location.protocol === "file:") return;
+    var hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(function (reg) {
+      reg.update();                       // 每次打开都检查是否有新版本
+    }).catch(function () { /* 忽略 */ });
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (hadController) showToast("已更新到新版本，关闭后重新打开即可生效", 4500);
+      hadController = true;
+    });
+  }
+
   function boot() {
     loadPrefs();
     if (!document.documentElement.getAttribute("data-theme")) {
@@ -417,18 +361,12 @@
     Array.prototype.forEach.call(document.querySelectorAll(".chip"), function (c) {
       c.classList.toggle("is-active", Number(c.dataset.sec) === state.preset);
     });
-    renderLevel();
+    parkAtSilence();
     renderTimer();
     updateMediaSession();
     maybeShowA2HS();
-    state.booted = true;
   }
 
-  if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    window.addEventListener("load", function () {
-      navigator.serviceWorker.register("sw.js").catch(function () { /* 忽略 */ });
-    });
-  }
-
+  window.addEventListener("load", registerServiceWorker);
   boot();
 })();
