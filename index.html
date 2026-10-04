@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="zh-CN" data-theme="auto">
+<html lang="en" data-theme="auto">
 <head>
 <meta charset="utf-8" />
-<title>100Hz 防晕动</title>
+<title>100Hz Motion Relief</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="description" content="播放 100 Hz 纯音缓解晕车、晕船与 3D 眩晕。依据 Nagoya University 2025 年研究，离线可用，可添加到 iPhone 主屏幕。" />
+<meta name="description" content="A 100 Hz pure tone to ease motion sickness — based on Gu et al., Environ Health Prev Med 2025. Works offline and installs to the iPhone home screen." />
 
 <meta name="theme-color" content="#f4f1ec" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#0e1211" media="(prefers-color-scheme: dark)" />
@@ -27,11 +27,11 @@
       <span class="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20"><path d="M1 12c1.6-4.6 3.1-6.9 4.6-6.9S8 8.6 9.2 12s2.3 6.9 3.8 6.9 2.4-2.3 4-6.9 2.6-6.9 4-6.9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       </span>
-      <span class="brand-text">100Hz 防晕动</span>
+      <span class="brand-text">100Hz Motion Relief</span>
     </div>
     <div class="topbar-actions">
-      <button id="helpBtn" class="icon-btn" type="button" aria-label="使用说明">?</button>
-      <button id="themeBtn" class="icon-btn" type="button" aria-label="切换深浅色">
+      <button id="helpBtn" class="icon-btn" type="button" aria-label="Instructions">?</button>
+      <button id="themeBtn" class="icon-btn" type="button" aria-label="Toggle light and dark theme">
         <svg class="ico-sun" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.2 5.2l1.6 1.6M17.2 17.2l1.6 1.6M18.8 5.2l-1.6 1.6M6.8 17.2l-1.6 1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
         <svg class="ico-moon" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
       </button>
@@ -40,32 +40,33 @@
 
   <main class="content">
 
-    <!-- 播放 -->
+    <!-- player -->
     <section class="card play-card">
       <div class="timer" id="timer">
         <div class="timer-main">
-          <span id="timeValue">60</span><span class="timer-unit" id="timeUnit"></span>
+          <span id="timeValue">1:00</span><span class="timer-unit" id="timeUnit"></span>
         </div>
-        <div class="timer-label" id="timeLabel">本次时长</div>
+        <div class="timer-label" id="timeLabel">Session length</div>
         <div class="timer-bar"><span id="timeBar"></span></div>
       </div>
 
       <button id="playBtn" class="play-btn" type="button" aria-live="polite">
         <svg class="ico-play" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M8 5.2v13.6l11-6.8z" fill="currentColor"/></svg>
         <svg class="ico-pause" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="7" y="5" width="3.6" height="14" rx="1.4" fill="currentColor"/><rect x="13.4" y="5" width="3.6" height="14" rx="1.4" fill="currentColor"/></svg>
-        <span id="playLabel">开始播放</span>
+        <span id="playLabel">Start</span>
       </button>
 
-      <div class="presets" role="group" aria-label="播放时长">
+      <div class="presets" role="group" aria-label="Session length">
         <button type="button" class="chip" data-sec="20">20s</button>
         <button type="button" class="chip" data-sec="40">40s</button>
         <button type="button" class="chip is-active" data-sec="60">60s</button>
-        <button type="button" class="chip" data-sec="0">循环</button>
+        <button type="button" class="chip" data-sec="0">Loop</button>
       </div>
-      <p class="hint" id="playHint">论文方案：出发前 1 分钟，双耳同时听。音量请用手机侧边音量键，调到清楚可闻、不刺耳。</p>
+
+      <p class="hint"><span class="k">Instructions</span>1 minute before the ride · both ears · set the volume with the side buttons — clearly audible, never uncomfortable.</p>
     </section>
 
-    <!-- 原理（论文原文要点） -->
+    <!-- why this works -->
     <section class="card note-card" aria-labelledby="noteTitle">
       <div class="card-head">
         <h2 id="noteTitle" class="card-title">WHY 100 Hz</h2>
@@ -73,41 +74,42 @@
       </div>
 
       <p class="note-p">
-        Motion sickness is driven by <em>vestibular dysfunction</em>. The otolith organs of the inner ear
-        — the utricle and saccule — carry tiny calcium-carbonate crystals called <em>otoconia</em> that
-        sense linear acceleration. A 100 Hz pure tone is mechanically transduced by those crystals:
-        <em>it activates the vestibular end organs rather than the cochlea alone</em>.
-        A single 1-minute exposure before motion was enough to reduce postural imbalance,
-        autonomic dysregulation and subjective symptoms in mice and in humans.
+        Motion sickness follows <em>vestibular dysfunction</em>. A pure tone at 100 Hz is transduced by the
+        <em>otoconia</em> — the calcium-carbonate crystals of the utricle and saccule — so it activates the
+        otolith organs, not just the cochlea.
       </p>
 
       <figure class="fig">
-        <svg class="fig-svg" viewBox="0 0 244 64" role="img" aria-label="100 Hz sine wave, period 10 ms">
-          <line class="ax" x1="10" y1="32" x2="236" y2="32" />
-          <line class="tick" x1="14" y1="28" x2="14" y2="36" />
-          <line class="tick" x1="86" y1="28" x2="86" y2="36" />
-          <line class="tick" x1="158" y1="28" x2="158" y2="36" />
-          <line class="tick" x1="230" y1="28" x2="230" y2="36" />
-          <line class="amp" x1="7" y1="12" x2="7" y2="52" />
-          <path class="wave" d="M14,32 L16,28.5 L18,25.2 L20,22 L22,19.1 L24,16.7 L26,14.7 L28,13.2 L30,12.3 L32,12 L34,12.3 L36,13.2 L38,14.7 L40,16.7 L42,19.1 L44,22 L46,25.2 L48,28.5 L50,32 L52,35.5 L54,38.8 L56,42 L58,44.9 L60,47.3 L62,49.3 L64,50.8 L66,51.7 L68,52 L70,51.7 L72,50.8 L74,49.3 L76,47.3 L78,44.9 L80,42 L82,38.8 L84,35.5 L86,32 L88,28.5 L90,25.2 L92,22 L94,19.1 L96,16.7 L98,14.7 L100,13.2 L102,12.3 L104,12 L106,12.3 L108,13.2 L110,14.7 L112,16.7 L114,19.1 L116,22 L118,25.2 L120,28.5 L122,32 L124,35.5 L126,38.8 L128,42 L130,44.9 L132,47.3 L134,49.3 L136,50.8 L138,51.7 L140,52 L142,51.7 L144,50.8 L146,49.3 L148,47.3 L150,44.9 L152,42 L154,38.8 L156,35.5 L158,32 L160,28.5 L162,25.2 L164,22 L166,19.1 L168,16.7 L170,14.7 L172,13.2 L174,12.3 L176,12 L178,12.3 L180,13.2 L182,14.7 L184,16.7 L186,19.1 L188,22 L190,25.2 L192,28.5 L194,32 L196,35.5 L198,38.8 L200,42 L202,44.9 L204,47.3 L206,49.3 L208,50.8 L210,51.7 L212,52 L214,51.7 L216,50.8 L218,49.3 L220,47.3 L222,44.9 L224,42 L226,38.8 L228,35.5 L230,32" />
-          <text class="fig-t" x="12" y="62">0</text>
-          <text class="fig-t" x="78" y="62">10 ms</text>
-          <text class="fig-t" x="150" y="62">20 ms</text>
-          <text class="fig-t" x="6" y="9">A</text>
+        <svg class="fig-svg" viewBox="0 0 244 78" role="img" aria-label="100 Hz sine wave, period 10 ms">
+          <line class="ax" x1="10" y1="40" x2="240" y2="40" />
+          <line class="tick" x1="14" y1="36" x2="14" y2="44" />
+          <line class="tick" x1="88.7" y1="36" x2="88.7" y2="44" />
+          <line class="tick" x1="163.4" y1="36" x2="163.4" y2="44" />
+          <line class="amp" x1="7" y1="13" x2="7" y2="67" />
+          <path class="wave" d="M14.0,40.0 L15.9,35.8 L17.7,31.7 L19.6,27.7 L21.5,24.1 L23.3,20.9 L25.2,18.2 L27.1,15.9 L28.9,14.3 L30.8,13.3 L32.7,13.0 L34.5,13.3 L36.4,14.3 L38.3,15.9 L40.1,18.2 L42.0,20.9 L43.9,24.1 L45.7,27.7 L47.6,31.7 L49.5,35.8 L51.4,40.0 L53.2,44.2 L55.1,48.3 L57.0,52.3 L58.8,55.9 L60.7,59.1 L62.6,61.8 L64.4,64.1 L66.3,65.7 L68.2,66.7 L70.0,67.0 L71.9,66.7 L73.8,65.7 L75.6,64.1 L77.5,61.8 L79.4,59.1 L81.2,55.9 L83.1,52.3 L85.0,48.3 L86.8,44.2 L88.7,40.0 L90.6,35.8 L92.4,31.7 L94.3,27.7 L96.2,24.1 L98.0,20.9 L99.9,18.2 L101.8,15.9 L103.6,14.3 L105.5,13.3 L107.4,13.0 L109.2,13.3 L111.1,14.3 L113.0,15.9 L114.8,18.2 L116.7,20.9 L118.6,24.1 L120.4,27.7 L122.3,31.7 L124.2,35.8 L126.0,40.0 L127.9,44.2 L129.8,48.3 L131.7,52.3 L133.5,55.9 L135.4,59.1 L137.3,61.8 L139.1,64.1 L141.0,65.7 L142.9,66.7 L144.7,67.0 L146.6,66.7 L148.5,65.7 L150.3,64.1 L152.2,61.8 L154.1,59.1 L155.9,55.9 L157.8,52.3 L159.7,48.3 L161.5,44.2 L163.4,40.0 L165.3,35.8 L167.1,31.7 L169.0,27.7 L170.9,24.1 L172.7,20.9 L174.6,18.2 L176.5,15.9 L178.3,14.3 L180.2,13.3 L182.1,13.0 L183.9,13.3 L185.8,14.3 L187.7,15.9 L189.5,18.2 L191.4,20.9 L193.3,24.1 L195.1,27.7 L197.0,31.7 L198.9,35.8 L200.8,40.0 L202.6,44.2 L204.5,48.3 L206.4,52.3 L208.2,55.9 L210.1,59.1 L212.0,61.8 L213.8,64.1 L215.7,65.7 L217.6,66.7 L219.4,67.0 L221.3,66.7 L223.2,65.7 L225.0,64.1 L226.9,61.8 L228.8,59.1 L230.6,55.9 L232.5,52.3 L234.4,48.3 L236.2,44.2 L238.1,40.0" />
+          <text class="fig-t" x="12" y="76">0</text>
+          <text class="fig-t" x="79" y="76">10 ms</text>
+          <text class="fig-t" x="153" y="76">20 ms</text>
+          <text class="fig-t" x="4" y="11">A</text>
         </svg>
-        <figcaption class="figcap">Fig. 1 — the stimulus: <span class="eqi">s(t) = A · sin(2π f t)</span>, with <span class="eqi">f = 100 Hz</span> and period <span class="eqi">T = 1/f = 10 ms</span>.</figcaption>
+        <figcaption class="figcap">Fig. 1 — <span class="eqi">s(t) = A · sin(2π f t)</span>, <span class="eqi">f = 100 Hz</span>, period <span class="eqi">T = 1/f = 10 ms</span>.</figcaption>
       </figure>
 
       <div class="eqs">
         <div class="eqrow">
-          <span class="eqlab">sound pressure level</span>
+          <span class="eqlab">level</span>
           <span class="eqi">L<sub>Z</sub> = 20 · log<sub>10</sub>( p / p₀ )</span>
           <span class="eqnote">p₀ = 20 µPa</span>
         </div>
         <div class="eqrow">
-          <span class="eqlab">A-weighting at 100 Hz</span>
+          <span class="eqlab">A-weighting</span>
           <span class="eqi">L<sub>A</sub> = L<sub>Z</sub> − 19.1 dB</span>
           <span class="eqnote">⇒ 80–85 dB(Z) = 60.9–65.9 dB(A)</span>
+        </div>
+        <div class="eqrow">
+          <span class="eqlab">dose</span>
+          <span class="eqi">t<sub>exposure</sub> = 1 min</span>
+          <span class="eqnote">before motion, bilaterally</span>
         </div>
       </div>
 
@@ -116,7 +118,7 @@
           <g class="box">
             <rect x="4" y="6" width="88" height="36" rx="9" />
             <text class="fig-b" x="48" y="22">100 Hz tone</text>
-            <text class="fig-s" x="48" y="35">80–85 dB(Z) · 1 min</text>
+            <text class="fig-s" x="48" y="35">80–85 dB(Z)</text>
           </g>
           <path class="arw" d="M96 24 H112" />
           <path class="arwh" d="M112 24 l-6 -3.2 v6.4 z" />
@@ -149,52 +151,48 @@
           </g>
           <g class="box">
             <rect x="112" y="70" width="96" height="36" rx="9" />
-            <text class="fig-s" x="160" y="86">↓ LF/HF ratio</text>
+            <text class="fig-s" x="160" y="86">↓ LF/HF</text>
             <text class="fig-s" x="160" y="99">sympathetic tone</text>
           </g>
           <g class="box">
             <rect x="212" y="70" width="104" height="36" rx="9" />
-            <text class="fig-s" x="264" y="86">↓ MSAQ score</text>
+            <text class="fig-s" x="264" y="86">↓ MSAQ</text>
             <text class="fig-s" x="264" y="99">subjective symptoms</text>
           </g>
         </svg>
-        <figcaption class="figcap">Fig. 2 — working model: acoustic energy is picked up by the otoconia and activates the otolith organs before motion, which blunts the imbalance and the autonomic response that follow.</figcaption>
+        <figcaption class="figcap">Fig. 2 — sound energy → otoconia → vestibular activation → less imbalance and autonomic response.</figcaption>
       </figure>
 
-      <p class="note-p tight">
-        <span class="k">Protocol</span> bilateral (both ears), 1 minute, before the ride. In mice the effect
-        of a 5-minute exposure persisted for ≥ 120 min. Unilateral exposure and 250 Hz did <em>not</em> work.
-      </p>
+      <p class="note-p tight"><span class="k">Protocol</span>bilateral, 1 minute, before motion. In mice a 5-minute exposure held for ≥ 120 min; unilateral exposure and 250 Hz did not work.</p>
       <p class="cite">Gu Y, Ohgami N, He T, Kagawa T, Kurniasari F, Tong K, Li X, Tazaki A, Takeda K, Mouri M, Kato M.
         <i>Just 1-min exposure to a pure tone at 100 Hz with daily exposable sound pressure levels may improve motion sickness.</i>
         Environ Health Prev Med. 2025;30. doi:10.1265/ehpm.24-00247</p>
     </section>
 
     <p class="safety">
-      长时间大音量聆听可能损伤听力，请控制音量与时长；若出现耳鸣、头晕加重或任何不适，请立即停止并咨询医生。本应用不能替代医疗建议。
+      Long exposure at high volume can damage hearing — keep both moderate. Stop immediately if you notice ringing,
+      worsening dizziness or any discomfort. This app is not medical advice.
     </p>
   </main>
 
-  <!-- iOS 添加到主屏幕提示 -->
   <div class="a2hs" id="a2hs" hidden>
-    <span>在 Safari 中点底部「分享」，选择「添加到主屏幕」，即可全屏离线使用。</span>
-    <button type="button" id="a2hsClose" aria-label="关闭提示">✕</button>
+    <span>Tap <b>Share</b> in Safari, then “Add to Home Screen” to run full-screen and offline.</span>
+    <button type="button" id="a2hsClose" aria-label="Dismiss">✕</button>
   </div>
 
-  <!-- 使用说明 -->
   <div class="sheet" id="sheet" hidden>
     <div class="sheet-backdrop" data-close></div>
     <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
-      <h2 id="sheetTitle">使用说明</h2>
+      <h2 id="sheetTitle">Instructions</h2>
       <ol>
-        <li>把手机放在身边（口袋里也可），让 100 Hz 纯音持续播放。</li>
-        <li>音量请用<b>手机侧边音量键</b>调整（App 内不设音量条），由小到大调到清楚可闻、不刺耳；对照论文，大约是耳旁 <b>80~85 dB(Z)</b>，也就是 60.9~65.9 dB(A)。</li>
-        <li>论文方案是<b>出发前 1 分钟</b>、双耳同时听；默认时长已设为 60 秒，也可切 20/40 秒或循环。</li>
-        <li>播放中屏幕会保持常亮；锁屏或切到别的 App 音频会继续（可下拉控制中心暂停）。</li>
-        <li>若听不到声音，请检查 iPhone 左侧的<b>静音拨片/静音开关</b>是否关闭。</li>
+        <li>Keep the phone near you — a pocket is fine — and let the 100 Hz tone play.</li>
+        <li>Use the <b>hardware volume buttons</b> (there is no in-app volume). Aim for clearly audible but never uncomfortable: the study used <b>80–85 dB(Z)</b> ≈ 60.9–65.9 dB(A) at the ear.</li>
+        <li>The study protocol is <b>1 minute, both ears, before the ride</b>. The default session is 60 s; 20 s, 40 s and loop are also available.</li>
+        <li>The screen stays awake while playing. Audio keeps playing on the lock screen or in another app — pause it from Control Center.</li>
+        <li>No sound? Check the <b>ring/silent switch</b> on the left side of the iPhone.</li>
       </ol>
-      <p class="sheet-meta">音频：100 Hz 纯音 · 60 秒 · 起播 0.3 秒静音 + 0.7 秒淡入，避免爆音 · 版本 v4</p>
-      <button type="button" class="play-btn ghost" data-close>知道了</button>
+      <p class="sheet-meta">Audio: 100 Hz pure tone · 60 s · 0.3 s silence + 0.7 s fade-in, so playback starts without a click · build v5</p>
+      <button type="button" class="play-btn ghost" data-close>Got it</button>
     </div>
   </div>
 

@@ -1,6 +1,6 @@
 /* 100Hz 防晕动 — Service Worker（离线可用） */
 
-var CACHE = "hz100-v4";
+var CACHE = "hz100-v5";
 var CORE = [
   "./",
   "./index.html",

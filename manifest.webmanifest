@@ -1,8 +1,8 @@
 {
-  "name": "100Hz 防晕动",
+  "name": "100Hz Motion Relief",
   "short_name": "100Hz",
-  "description": "播放 100 Hz 纯音以缓解晕车、晕船与 3D 眩晕。可离线使用。",
-  "lang": "zh-CN",
+  "description": "A 100 Hz pure tone to ease motion sickness while travelling. Based on Gu et al., Environ Health Prev Med 2025. Works offline.",
+  "lang": "en",
   "dir": "ltr",
   "start_url": "./index.html",
   "scope": "./",

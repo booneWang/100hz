@@ -230,7 +230,7 @@ html[data-theme="light"] .ico-moon { display: none; }
 
 .note-p.tight { margin-bottom: 10px; }
 
-.note-p .k {
+.k {
   display: inline-block;
   font-size: 10.5px;
   letter-spacing: 0.08em;
@@ -264,9 +264,9 @@ html[data-theme="light"] .ico-moon { display: none; }
 }
 
 .fig .box text { text-anchor: middle; }
-.fig .fig-b { font-size: 10px; font-weight: 600; fill: var(--ink-2); }
-.fig .fig-s { font-size: 8.5px; fill: var(--muted); }
-.fig .fig-t { font-size: 8px; fill: var(--muted); }
+.fig .fig-b { font-size: 10.5px; font-weight: 600; fill: var(--ink-2); }
+.fig .fig-s { font-size: 9px; fill: var(--muted); }
+.fig .fig-t { font-size: 8.5px; fill: var(--muted); }
 
 .figcap {
   margin-top: 8px;
@@ -292,22 +292,22 @@ html[data-theme="light"] .ico-moon { display: none; }
   display: flex;
   align-items: baseline;
   gap: 8px;
-  padding: 7px 0;
-  font-size: 11.5px;
+  padding: 9px 0;
+  font-size: 12.5px;
   border-bottom: 1px solid var(--line);
 }
 
 .eqrow:last-child { border-bottom: none; }
 
 .eqlab {
-  flex: 0 0 96px;
+  flex: 0 0 80px;
   font-size: 10px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
-.eqnote { color: var(--muted); font-size: 11px; }
+.eqnote { color: var(--muted); font-size: 11.5px; }
 
 .cite {
   margin: 8px 0 0;

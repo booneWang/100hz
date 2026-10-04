@@ -96,7 +96,7 @@
     if (state.preset === 0) {
       timeValue.textContent = fmt(elapsedSeconds());
       timeUnit.textContent = "";
-      timeLabel.textContent = state.playing ? "已播放 · 循环中" : "循环播放";
+      timeLabel.textContent = state.playing ? "Playing · looping" : "Loop";
       var dur = audio.duration && isFinite(audio.duration) ? audio.duration : 60;
       timeBar.style.width = Math.min(100, (audio.currentTime || 0) / dur * 100) + "%";
       return;
@@ -104,7 +104,7 @@
     var left = state.playing || state.paused ? remainingSeconds() : state.preset;
     timeValue.textContent = fmt(left);
     timeUnit.textContent = state.preset >= 60 || left >= 60 ? "" : "s";
-    timeLabel.textContent = state.playing ? "剩余时间" : (state.paused ? "已暂停" : "本次时长");
+    timeLabel.textContent = state.playing ? "Remaining" : (state.paused ? "Paused" : "Session length");
     timeBar.style.width = Math.min(100, Math.max(0, (1 - left / state.preset) * 100)) + "%";
   }
 
@@ -142,7 +142,7 @@
         state.paused = false;
         state.startedAt = Date.now();
         document.body.classList.add("is-playing");
-        playLabel.textContent = "暂停";
+        playLabel.textContent = "Pause";
         startTicker();
         renderTimer();
         updateMediaSession();
@@ -151,7 +151,7 @@
       }).catch(function (err) {
         state.playing = false;
         document.body.classList.remove("is-playing");
-        showToast("无法播放音频：" + (err && err.message ? err.message : "请检查静音开关"), 4200);
+        showToast("Cannot play audio: " + (err && err.message ? err.message : "check the silent switch"), 4200);
         renderTimer();
       });
     }
@@ -168,7 +168,7 @@
     audio.pause();
     parkAtSilence();                     // 归零，下次起播仍在静音区
     document.body.classList.remove("is-playing");
-    playLabel.textContent = "继续播放";
+    playLabel.textContent = "Resume";
     renderTimer();
     updateMediaSession();
     releaseWakeLock();
@@ -183,12 +183,12 @@
     audio.pause();
     parkAtSilence();
     document.body.classList.remove("is-playing");
-    playLabel.textContent = "开始播放";
+    playLabel.textContent = "Start";
     renderTimer();
     updateMediaSession();
     releaseWakeLock();
     if (navigator.vibrate) navigator.vibrate([18, 90, 18]);
-    showToast("本次 " + state.preset + " 秒播放完成", 2400);
+    showToast("Session complete — " + state.preset + " s", 2400);
   }
 
   function resetToIdle() {
@@ -200,7 +200,7 @@
     audio.pause();
     try { audio.currentTime = 0; } catch (e) { /* 忽略 */ }
     document.body.classList.remove("is-playing");
-    playLabel.textContent = "开始播放";
+    playLabel.textContent = "Start";
     renderTimer();
     updateMediaSession();
     releaseWakeLock();
@@ -264,7 +264,7 @@
       localStorage.setItem("hz100.played.once", "1");
     } catch (e) { /* 忽略 */ }
     setTimeout(function () {
-      showToast("听不到声音？请检查静音开关，并用侧边音量键调大音量", 4200);
+      showToast("No sound? Check the ring/silent switch, then raise the volume with the side buttons.", 4600);
     }, 900);
   }
 
@@ -314,7 +314,7 @@
   });
 
   audio.addEventListener("error", function () {
-    showToast("音频加载失败，请确认 audio/100hz.mp3 存在", 4000);
+    showToast("Audio failed to load — check audio/100hz.mp3", 4000);
     playLabel.classList.add("no-audio");
   });
 
@@ -348,7 +348,7 @@
       reg.update();                       // 每次打开都检查是否有新版本
     }).catch(function () { /* 忽略 */ });
     navigator.serviceWorker.addEventListener("controllerchange", function () {
-      if (hadController) showToast("已更新到新版本，关闭后重新打开即可生效", 4500);
+      if (hadController) showToast("Updated — reopen the app to use the new version.", 4500);
       hadController = true;
     });
   }

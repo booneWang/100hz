@@ -1,50 +1,64 @@
-# 100Hz 防晕动
+# 100Hz Motion Relief
 
-用 100 Hz 纯音缓解晕车、晕船、VR/3D 眩晕的 iPhone PWA（可离线、可锁屏后台播放）。
+A 100 Hz pure tone that eases motion sickness (car, boat, VR/3D). Installable as an iPhone web app:
+works offline, keeps playing on the lock screen, and has no in-app volume (use the hardware buttons).
 
-依据：Gu Y, Ohgami N, He T, et al. *Just 1-min exposure to a pure tone at 100 Hz with daily exposable
-sound pressure levels may improve motion sickness.* Environ Health Prev Med. 2025;30. doi:10.1265/ehpm.24-00247
+**Live:** https://boonewang.github.io/100hz/
 
-**在线地址：** https://boonewang.github.io/100hz/
+## Basis
 
-## 安装到 iPhone
+Gu Y, Ohgami N, He T, Kagawa T, Kurniasari F, Tong K, Li X, Tazaki A, Takeda K, Mouri M, Kato M.
+*Just 1-min exposure to a pure tone at 100 Hz with daily exposable sound pressure levels may improve motion sickness.*
+Environ Health Prev Med. 2025;30. doi:[10.1265/ehpm.24-00247](https://doi.org/10.1265/ehpm.24-00247) (Nagoya University)
 
-Safari 打开上面的地址 → 底部「分享」→「添加到主屏幕」。之后从主屏图标打开即全屏运行，用过一次后完全离线可用。
+The tone is transduced by the **otoconia** of the utricle and saccule, so it activates the otolith organs rather than
+hearing alone. In the study, a single **1-minute, bilateral exposure at 80–85 dB(Z) = 60.9–65.9 dB(A) before motion**
+reduced postural imbalance, autonomic dysregulation and subjective symptoms — in mice the effect lasted ≥ 120 min.
 
-## 功能
+## Install on iPhone
 
-- 播放 100 Hz 纯音，默认 40 秒，可切换 20s / 60s / 循环
-- 「WHY 100 Hz」原理卡片：英文说明 + 公式（s(t)、L_Z、A 计权换算）+ 两张示意图
-- 锁屏 / 后台继续播放（控制中心可暂停），播放时屏幕保持常亮
-- Service Worker 离线缓存、浅色/深色主题、iOS 安全区适配
+Open the live URL in Safari → **Share** → **Add to Home Screen**. After one play it is fully offline.
 
-## 文件
+## Features
+
+- 100 Hz pure tone; default session 60 s (the study protocol), plus 20 s / 40 s / loop
+- Session timer, progress bar, screen stays awake while playing
+- Lock-screen / background playback (Media Session controls)
+- "WHY 100 Hz" card: English summary, formulas (`s(t)`, `L_Z`, A-weighting) and two SVG figures
+- Service worker offline cache, light/dark theme, iOS safe-area layout
+- No in-app volume; guidance for setting the hardware volume instead
+
+## Files
 
 ```
-index.html            页面结构
-styles.css            样式
-app.js                逻辑（计时、声压级估算、锁屏控制）
-manifest.webmanifest  PWA 清单
-sw.js                 Service Worker（离线缓存）
-icons/                主屏图标（180/192/512/maskable）
-audio/100hz.mp3       100 Hz 纯音，60 秒，44.1 kHz（0.3s 静音 + 0.7s 淡入 + 0.6s 淡出）
-diag.html             音量检测页（排查设备是否允许网页读取系统音量）
+index.html            page
+styles.css            styles
+app.js                logic (timer, playback, wake lock, media session)
+manifest.webmanifest  PWA manifest
+sw.js                 service worker (offline cache)
+icons/                home-screen icons (180/192/512/maskable)
+audio/100hz.mp3       100 Hz pure tone, 60 s, 44.1 kHz
+diag.html             volume-readability check (utility page, not linked)
 ```
 
-## 本地预览
+## Audio
 
-任意静态服务器均可，例如：
+- Source `1Hhz.mp3` (320 kbps / 44.1 kHz / 60 s) was re-encoded to `audio/100hz.mp3`.
+- Shape: **0–0.3 s digital silence → 0.3–1.0 s fade-in → tone → 59.4–60 s fade-out.**
+  The silent lead-in and the playback-to-zero rule in `app.js` are what keep iOS from producing a
+  loud click at the start (iOS does not allow JS to set media volume or fade).
+- Verified: stable 100.0 Hz sine, peak −3 dBFS, RMS −6 dBFS, first samples exactly zero.
+
+## Local preview
 
 ```bash
 python3 -m http.server 8080
 ```
 
-> 注意：Service Worker 需要 HTTPS 或 localhost 才会启用。
+Service workers need HTTPS or localhost.
 
-## 说明
+## Notes
 
-- App 内不设音量条：iOS 不允许网页设置媒体音量，音量请用侧边音量键调节（论文参考值 80~85 dB(Z) = 60.9~65.9 dB(A)）。
-- 音频文件开头有 0.3 秒真静音、0.7 秒淡入，结尾 0.6 秒淡出；暂停/结束时播放位置归零，因此每次起播都落在静音区，避免 iPhone 上“嗒”的一声，循环接缝也无声。
-- 界面不显示声压级数值：iOS 不向网页开放系统音量读数，显示的数字没有意义；改为论文原理说明。
-- 若听不到声音，请检查静音开关。
-- 长时间大音量聆听可能损伤听力，如出现耳鸣、头晕加重等不适请立即停止并咨询医生。本应用不能替代医疗建议。
+- iOS never exposes the system volume to web pages, so the app deliberately shows no dB figure.
+- No sound? Check the ring/silent switch, then raise the volume with the side buttons.
+- Long exposure at high volume can damage hearing; this app is not medical advice.
