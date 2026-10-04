@@ -44,9 +44,9 @@
     <section class="card level-card" aria-labelledby="levelTitle">
       <div class="card-head">
         <h2 id="levelTitle" class="card-title">当前声压级</h2>
-        <span class="tag">估算</span>
+        <span class="tag" id="levelTag">检测中</span>
       </div>
-      <p class="level-value"><span id="splValue">82</span><span class="unit">dB</span></p>
+      <p class="level-value" id="levelValue"><span id="splValue">--</span><span class="unit" id="splUnit"></span></p>
       <p class="level-note">（建议声压级 80~85 dB）</p>
 
       <div class="meter" role="img" aria-label="声压级示意">
@@ -58,7 +58,7 @@
           <span>60</span><span>70</span><span>80</span><span>90</span><span>100</span>
         </div>
       </div>
-      <p class="hint" id="levelHint">音量 80% · 以扬声器满音量约 85 dB 估算</p>
+      <p class="hint" id="levelHint">正在检测系统音量…</p>
     </section>
 
     <!-- 计时 / 播放 -->
@@ -85,19 +85,6 @@
       </div>
     </section>
 
-    <!-- 音量 -->
-    <section class="card volume-card">
-      <div class="card-head">
-        <h2 class="card-title">音量</h2>
-        <span class="tag" id="volTag">80%</span>
-      </div>
-      <div class="volume-row">
-        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9.5h3.2L11.5 6v12L7.2 14.5H4z" fill="currentColor"/><path d="M15.2 9.4a3.7 3.7 0 0 1 0 5.2M17.8 6.9a7.2 7.2 0 0 1 0 10.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-        <input id="volSlider" type="range" min="0" max="100" step="1" value="80" aria-label="音量" />
-      </div>
-      <p class="hint" id="volHint">建议由小到大逐步调整，找到刚好能遮盖不适感的音量。</p>
-    </section>
-
     <p class="safety">
       长时间大音量聆听可能损伤听力，请控制音量与时长；若出现耳鸣、头晕加重或任何不适，请立即停止并咨询医生。本应用不能替代医疗建议。
     </p>
@@ -116,10 +103,11 @@
       <h2 id="sheetTitle">使用说明</h2>
       <ol>
         <li>把手机放在身边（口袋里也可），让 100 Hz 纯音持续播放。</li>
-        <li>音量由小到大调整，通常与耳边的环境声相当即可；<b>iPhone 请用侧边音量键</b>调整，App 内滑块用于记录你的音量并估算声压级。</li>
+        <li>音量请用<b>手机侧边音量键</b>调整（App 内不设音量条），由小到大调到你刚好能清楚听到 100 Hz 纯音、并盖过环境噪音的程度。</li>
         <li>默认每次 40 秒，可切换 20 / 60 秒或循环播放；播放中屏幕会保持常亮。</li>
         <li>锁屏或切到别的 App 时音频会继续（可下拉控制中心暂停）。</li>
         <li>若听不到声音，请检查 iPhone 左侧的<b>静音拨片/静音开关</b>是否关闭。</li>
+        <li>顶部「当前声压级」会在系统允许网页读取音量时实时跟随音量键变化；iOS 通常不开放该读数，此时改为提示你用音量键调节。</li>
       </ol>
       <h3>关于 100 Hz</h3>
       <p>100 Hz 低频振动声被研究用于减轻晕动症（乘车、乘船、VR/3D 眩晕）。建议在出发前或不适初期就开始播放，并保持音量适中。</p>
@@ -132,6 +120,8 @@
 </div>
 
 <audio id="tone" src="audio/100hz.mp3" loop preload="auto" playsinline></audio>
+<video id="volProbe" src="audio/100hz.mp3" preload="none" playsinline aria-hidden="true"
+       style="position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-9999px"></video>
 <script src="app.js"></script>
 </body>
 </html>

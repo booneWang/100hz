@@ -1,32 +1,36 @@
 /* 100Hz 防晕动 — 应用逻辑
    播放 100 Hz 纯音，帮助缓解晕动症。
-   音频走 <audio> 元素（iOS 后台/锁屏可继续播放），声压级为音量估算值。 */
+
+   音频走 <audio> 元素（iOS 后台/锁屏可继续播放）。
+   音频文件自带 0.45s 淡入 / 0.5s 淡出：iOS 不允许网页设置媒体元素音量，
+   硬起播会有一声“嗒”，所以淡入淡出做在音频文件里，而不是用 JS 改音量。
+   声压级：优先读系统音量（部分平台会把系统音量映射到媒体元素上），
+   读不到时（iOS 通常如此）改为提示用音量键调节，不显示假数字。 */
 
 (function () {
   "use strict";
 
-  var MAX_SPL = 85;      // 以扬声器满音量约 85 dB SPL 为参考
-  var MIN_SPL_SCALE = 60;   // 进度条量程
+  var MAX_SPL = 85;          // 以扬声器满音量约 85 dB SPL 为参考
+  var MIN_SPL_SCALE = 60;    // 进度条量程
   var MAX_SPL_SCALE = 100;
-  var FADE_IN = 600;
-  var FADE_OUT = 900;
   var STORE_KEY = "hz100.prefs.v1";
 
   var $ = function (id) { return document.getElementById(id); };
 
   var audio = $("tone");
+  var volProbe = $("volProbe");
   var playBtn = $("playBtn");
   var playLabel = $("playLabel");
   var timeValue = $("timeValue");
   var timeUnit = $("timeUnit");
   var timeLabel = $("timeLabel");
   var timeBar = $("timeBar");
+  var levelValue = $("levelValue");
+  var levelTag = $("levelTag");
   var splValue = $("splValue");
+  var splUnit = $("splUnit");
   var meterFill = $("meterFill");
   var levelHint = $("levelHint");
-  var volSlider = $("volSlider");
-  var volHint = $("volHint");
-  var volTag = $("volTag");
   var themeBtn = $("themeBtn");
   var helpBtn = $("helpBtn");
   var sheet = $("sheet");
@@ -36,28 +40,18 @@
 
   var state = {
     preset: 40,        // 秒；0 = 循环
-    playing: false,    // 音频正在播放
-    paused: false,     // 从播放中暂停
-    elapsedBase: 0,    // 已累计的播放秒数（暂停时结算）
+    playing: false,
+    paused: false,
+    elapsedBase: 0,    // 已累计播放秒数（暂停时结算）
     startedAt: null,   // 本次播放开始的墙上时钟
-    targetVol: 0.8,
-    recenters: null,
     wakeLock: null,
     tickerId: null,
     rafId: null,
-    fadeTimer: null,
     booted: false
   };
 
-  /* iOS(Safari) 不允许网页设置 media 元素音量：
-     探测后降级为「参考音量」，只用于声压级估算，实际音量由侧边音量键控制。 */
-  var canControlVolume = (function () {
-    try {
-      var probe = document.createElement("audio");
-      probe.volume = 0.37;
-      return Math.abs(probe.volume - 0.37) < 0.02;
-    } catch (e) { return false; }
-  })();
+  // null = 平台不开放系统音量读数
+  var systemVolume = null;
 
   /* ---------------- 偏好存储 ---------------- */
 
@@ -66,7 +60,6 @@
       var raw = localStorage.getItem(STORE_KEY);
       if (!raw) return;
       var p = JSON.parse(raw);
-      if (typeof p.volume === "number") state.targetVol = Math.min(1, Math.max(0, p.volume));
       if (typeof p.preset === "number" && [0, 20, 40, 60].indexOf(p.preset) >= 0) state.preset = p.preset;
       if (p.theme) document.documentElement.setAttribute("data-theme", p.theme);
     } catch (e) { /* 忽略 */ }
@@ -75,14 +68,30 @@
   function savePrefs() {
     try {
       localStorage.setItem(STORE_KEY, JSON.stringify({
-        volume: state.targetVol,
         preset: state.preset,
         theme: document.documentElement.getAttribute("data-theme") || "auto"
       }));
     } catch (e) { /* 忽略 */ }
   }
 
-  /* ---------------- 声压级估算 ---------------- */
+  /* ---------------- 系统音量 ---------------- */
+
+  function volumeOf(el) {
+    if (!el) return null;
+    var v = el.volume;
+    return typeof v === "number" && isFinite(v) && v >= 0 && v <= 1 ? v : null;
+  }
+
+  // 默认音量就是 1：若读到小于 1，或观察到音量变化，说明平台把系统音量映射到了元素上
+  function refreshSystemVolume() {
+    if (systemVolume !== null) return true;
+    var candidates = [volumeOf(audio), volumeOf(volProbe)];
+    for (var i = 0; i < candidates.length; i++) {
+      var v = candidates[i];
+      if (v !== null && v < 0.999) { systemVolume = v; return true; }
+    }
+    return false;
+  }
 
   function volumeToSpl(v) {
     if (v <= 0.001) return 0;
@@ -90,21 +99,40 @@
   }
 
   function renderLevel() {
-    var v = state.targetVol;
-    var spl = volumeToSpl(v);
-    var shown = v <= 0.01 ? 0 : Math.round(spl);
-    splValue.textContent = v <= 0.01 ? "--" : String(shown);
-    var pct = Math.min(100, Math.max(0, (spl - MIN_SPL_SCALE) / (MAX_SPL_SCALE - MIN_SPL_SCALE) * 100));
-    meterFill.style.width = (v <= 0.01 ? 0 : pct) + "%";
-    volTag.textContent = Math.round(v * 100) + "%";
-    levelHint.textContent = "音量 " + Math.round(v * 100) + "% · 以扬声器满音量约 " +
-      MAX_SPL + " dB 估算" + (canControlVolume ? "" : "（iOS 请用侧边音量键）");
-    if (volHint) {
-      volHint.textContent = canControlVolume
-        ? "建议由小到大逐步调整，找到刚好能遮盖不适感的音量。"
-        : "iPhone 上请用侧边音量键调整实际音量；此滑块用于记录当前音量，以便估算声压级。";
+    var readable = refreshSystemVolume();
+
+    if (!readable) {
+      levelValue.classList.add("is-guidance");
+      splValue.textContent = "请用音量键调节";
+      splUnit.textContent = "";
+      levelTag.textContent = "系统音量不可读";
+      meterFill.style.width = "0%";
+      levelHint.textContent = "iOS 不向网页开放系统音量读数：请用侧边音量键调到刚好盖过环境噪音的水平（建议声压级 80~85 dB）。在支持读取系统音量的设备上，这里会随音量键实时变化。";
+      return;
     }
+
+    var spl = volumeToSpl(systemVolume);
+    levelValue.classList.remove("is-guidance");
+    splValue.textContent = systemVolume <= 0.001 ? "--" : String(Math.round(spl));
+    splUnit.textContent = systemVolume <= 0.001 ? "" : "dB";
+    levelTag.textContent = "跟随系统音量";
+    var pct = Math.min(100, Math.max(0, (spl - MIN_SPL_SCALE) / (MAX_SPL_SCALE - MIN_SPL_SCALE) * 100));
+    meterFill.style.width = (systemVolume <= 0.001 ? 0 : pct) + "%";
+    levelHint.textContent = "实时跟随手机音量键更新（满音量按约 " + MAX_SPL + " dB 估算）。";
   }
+
+  ["volumechange", "volumeChanged"].forEach(function (evt) {
+    audio.addEventListener(evt, function () {
+      var v = volumeOf(audio);
+      if (v !== null) { systemVolume = v; renderLevel(); }
+    });
+    if (volProbe) {
+      volProbe.addEventListener(evt, function () {
+        var v = volumeOf(volProbe);
+        if (v !== null) { systemVolume = v; renderLevel(); }
+      });
+    }
+  });
 
   /* ---------------- 计时显示 ---------------- */
 
@@ -142,37 +170,10 @@
     timeValue.textContent = fmt(left);
     timeUnit.textContent = state.preset >= 60 ? "" : "s";
     timeLabel.textContent = state.playing ? "剩余时间" : (state.paused ? "已暂停" : "本次时长");
-    var total = state.preset;
-    timeBar.style.width = Math.min(100, Math.max(0, (1 - left / total) * 100)) + "%";
+    timeBar.style.width = Math.min(100, Math.max(0, (1 - left / state.preset) * 100)) + "%";
   }
 
   /* ---------------- 播放控制 ---------------- */
-
-  function setFade(from, to, ms, done) {
-    if (!canControlVolume) {           // iOS 无法调节元素音量，直接切换
-      if (done) done();
-      return;
-    }
-    if (state.fadeTimer) { clearInterval(state.fadeTimer); state.fadeTimer = null; }
-    var start = performance.now();
-    audio.volume = from;
-    if (ms <= 0) {
-      audio.volume = to;
-      if (done) done();
-      return;
-    }
-    state.fadeTimer = setInterval(function () {
-      var t = (performance.now() - start) / ms;
-      if (t >= 1) {
-        audio.volume = to;
-        clearInterval(state.fadeTimer);
-        state.fadeTimer = null;
-        if (done) done();
-      } else {
-        audio.volume = from + (to - from) * t;
-      }
-    }, 40);
-  }
 
   function updateTick() {
     if (!state.playing) return;
@@ -206,8 +207,6 @@
         state.startedAt = Date.now();
         document.body.classList.add("is-playing");
         playLabel.textContent = "暂停";
-        if (state.fadeTimer) { clearInterval(state.fadeTimer); state.fadeTimer = null; }
-        setFade(canControlVolume ? 0 : 1, state.targetVol, FADE_IN);
         startTicker();
         renderTimer();
         updateMediaSession();
@@ -216,7 +215,7 @@
       }).catch(function (err) {
         state.playing = false;
         document.body.classList.remove("is-playing");
-        showToast("无法播放音频：" + (err && err.message ? err.message : "请检查静音开关") , 4200);
+        showToast("无法播放音频：" + (err && err.message ? err.message : "请检查静音开关"), 4200);
         renderTimer();
       });
     }
@@ -230,9 +229,7 @@
     state.playing = false;
     state.paused = true;
     stopTicker();
-    setFade(audio.volume, 0, 220, function () {
-      audio.pause();
-    });
+    audio.pause();
     document.body.classList.remove("is-playing");
     playLabel.textContent = "继续播放";
     renderTimer();
@@ -246,7 +243,7 @@
     state.elapsedBase = 0;
     state.startedAt = null;
     stopTicker();
-    setFade(audio.volume, 0, FADE_OUT, function () { audio.pause(); });
+    audio.pause();
     document.body.classList.remove("is-playing");
     playLabel.textContent = "开始播放";
     renderTimer();
@@ -262,9 +259,7 @@
     state.elapsedBase = 0;
     state.startedAt = null;
     stopTicker();
-    if (state.fadeTimer) { clearInterval(state.fadeTimer); state.fadeTimer = null; }
     audio.pause();
-    if (canControlVolume) audio.volume = 0;
     audio.currentTime = 0;
     document.body.classList.remove("is-playing");
     playLabel.textContent = "开始播放";
@@ -311,8 +306,9 @@
   }
 
   document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState === "visible" && state.playing) requestWakeLock();
-    if (document.visibilityState === "visible" && state.playing) updateTick();
+    if (document.visibilityState !== "visible") return;
+    if (state.playing) { requestWakeLock(); updateTick(); }
+    renderLevel();
   });
 
   /* ---------------- UI 辅助 ---------------- */
@@ -325,7 +321,6 @@
     toastTimer = setTimeout(function () { toast.hidden = true; }, ms || 2200);
   }
 
-  // 首次播放提示（iOS 静音开关最容易踩坑）
   function showFirstPlayHint() {
     try {
       if (localStorage.getItem("hz100.played.once") === "1") return;
@@ -347,38 +342,21 @@
       c.classList.toggle("is-active", Number(c.dataset.sec) === sec);
     });
     if (state.playing || state.paused) {
-      // 播放中切换时长：重置倒计时并继续播放
       state.paused = false;
-      audio.currentTime = 0;
+      audio.currentTime = 0;   // 回到文件开头（自带淡入），避免中途起播的爆音
       if (!state.playing) play();
     }
     renderTimer();
     savePrefs();
   }
 
-  function setVolume(v, announce) {
-    state.targetVol = Math.min(1, Math.max(0, v));
-    volSlider.value = String(Math.round(state.targetVol * 100));
-    renderLevel();
-    if (state.playing) {
-      if (state.fadeTimer) { clearInterval(state.fadeTimer); state.fadeTimer = null; }
-      if (canControlVolume) audio.volume = state.targetVol;
-    }
-    if (announce) savePrefs();
-  }
-
   /* ---------------- 事件绑定 ---------------- */
 
-  playBtn.addEventListener("click", function () {
-    toggle();
-  });
+  playBtn.addEventListener("click", toggle);
 
   Array.prototype.forEach.call(document.querySelectorAll(".chip"), function (c) {
     c.addEventListener("click", function () { setPreset(Number(c.dataset.sec)); });
   });
-
-  volSlider.addEventListener("input", function () { setVolume(Number(volSlider.value) / 100, false); });
-  volSlider.addEventListener("change", function () { setVolume(Number(volSlider.value) / 100, true); });
 
   themeBtn.addEventListener("click", function () {
     var isDark = document.documentElement.getAttribute("data-theme") === "dark" ||
@@ -410,6 +388,8 @@
     if (state.preset > 0 && state.playing) finishSession();
   });
 
+  audio.addEventListener("playing", function () { setTimeout(renderLevel, 300); });
+
   document.addEventListener("gesturestart", function (e) { e.preventDefault(); });
 
   /* ---------------- 启动 ---------------- */
@@ -434,11 +414,9 @@
     if (!document.documentElement.getAttribute("data-theme")) {
       document.documentElement.setAttribute("data-theme", "auto");
     }
-    volSlider.value = String(Math.round(state.targetVol * 100));
     Array.prototype.forEach.call(document.querySelectorAll(".chip"), function (c) {
       c.classList.toggle("is-active", Number(c.dataset.sec) === state.preset);
     });
-    if (canControlVolume) audio.volume = 0;
     renderLevel();
     renderTimer();
     updateMediaSession();

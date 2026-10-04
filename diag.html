@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>音量检测 · 100Hz 防晕动</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex" />
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; padding:20px 16px calc(24px + env(safe-area-inset-bottom));
+         background:#0e1211; color:#ecf1ef; font:15px/1.6 -apple-system,"PingFang SC",system-ui,sans-serif; }
+  h1 { font-size:19px; margin:0 0 6px; }
+  p.lead { color:#9aa5a1; font-size:13.5px; margin:0 0 16px; }
+  .row { display:flex; justify-content:space-between; gap:10px; padding:11px 14px; background:#171c1b;
+         border:1px solid #252c2a; border-radius:14px; margin-bottom:8px; }
+  .row span:first-child { color:#9aa5a1; }
+  .val { font-variant-numeric:tabular-nums; font-weight:600; }
+  .big { font-size:26px; font-weight:700; color:#33c8b3; font-variant-numeric:tabular-nums; }
+  button { width:100%; min-height:54px; margin-top:12px; border:0; border-radius:18px; background:#33c8b3;
+           color:#06201c; font-size:17px; font-weight:650; font-family:inherit; }
+  button.ghost { background:transparent; color:#ecf1ef; border:1px solid #252c2a; }
+  pre { white-space:pre-wrap; word-break:break-all; background:#171c1b; border:1px solid #252c2a;
+        border-radius:14px; padding:12px; font-size:12.5px; margin-top:12px; }
+  .hint { color:#9aa5a1; font-size:12.5px; margin-top:10px; }
+</style>
+</head>
+<body>
+<h1>音量检测</h1>
+<p class="lead">用于确认这台 iPhone 是否允许网页读取系统音量。请先点「开始播放」，然后按几下手机侧边的音量键，看下面的数字会不会变。</p>
+
+<div class="row"><span>audio.volume（当前值）</span><span class="val big" id="aVol">–</span></div>
+<div class="row"><span>video.volume（当前值）</span><span class="val big" id="vVol">–</span></div>
+<div class="row"><span>audio 音量变化次数</span><span class="val" id="aCount">0</span></div>
+<div class="row"><span>video 音量变化次数</span><span class="val" id="vCount">0</span></div>
+<div class="row"><span>能否设置 audio.volume</span><span class="val" id="aSet">–</span></div>
+<div class="row"><span>能否设置 video.volume</span><span class="val" id="vSet">–</span></div>
+<div class="row"><span>播放状态</span><span class="val" id="state">未播放</span></div>
+
+<button id="play">开始播放</button>
+<button class="ghost" id="copy">复制检测结果</button>
+
+<pre id="out">按几下音量键后，这里会生成可复制的结论。</pre>
+<p class="hint">用途：如果按下音量键后上面数字有变化，就能让 App 里的「当前声压级」实时跟随系统音量；如果一直是 1.00，说明 iOS 不开放该读数，App 会改为提示用音量键调节。</p>
+
+<audio id="a" src="audio/100hz.mp3" loop preload="none" playsinline></audio>
+<video id="v" src="audio/100hz.mp3" loop preload="none" playsinline></video>
+
+<script>
+(function () {
+  var a = document.getElementById('a'), v = document.getElementById('v');
+  var aCount = 0, vCount = 0;
+  var fmt = function (x) { return (typeof x === 'number' && isFinite(x)) ? x.toFixed(2) : '–'; };
+
+  function paint() {
+    document.getElementById('aVol').textContent = fmt(a.volume);
+    document.getElementById('vVol').textContent = fmt(v.volume);
+    document.getElementById('state').textContent = a.paused ? '未播放' : ('播放中 ' + a.currentTime.toFixed(1) + 's');
+    document.getElementById('out').textContent = summarize();
+  }
+
+  function summarize() {
+    return [
+      'audio.volume=' + fmt(a.volume) + ' 变化次数=' + aCount,
+      'video.volume=' + fmt(v.volume) + ' 变化次数=' + vCount,
+      '可设置 audio=' + document.getElementById('aSet').textContent,
+      '可设置 video=' + document.getElementById('vSet').textContent
+    ].join('\n');
+  }
+
+  a.addEventListener('volumechange', function () { aCount++; paint(); });
+  v.addEventListener('volumechange', function () { vCount++; paint(); });
+  v.addEventListener('volumechange', paint);
+  a.addEventListener('timeupdate', paint);
+
+  // 探测是否能设置音量（设 0.5 后立刻还原）
+  setTimeout(function () {
+    var aBefore = a.volume; a.volume = 0.5;
+    document.getElementById('aSet').textContent = (Math.abs(a.volume - 0.5) < 0.01) ? '可以' : '不可以（只读）';
+    a.volume = aBefore;
+    var vBefore = v.volume; v.volume = 0.5;
+    document.getElementById('vSet').textContent = (Math.abs(v.volume - 0.5) < 0.01) ? '可以' : '不可以（只读）';
+    v.volume = vBefore;
+    paint();
+  }, 300);
+
+  document.getElementById('play').addEventListener('click', function () {
+    a.play().then(function () { paint(); }).catch(function (e) { alert('播放失败：' + e.message); });
+  });
+
+  document.getElementById('copy').addEventListener('click', function () {
+    var text = summarize();
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(function () {
+        document.getElementById('out').textContent = text + '\n\n（已复制到剪贴板）';
+      });
+    } else {
+      document.getElementById('out').textContent = text;
+    }
+  });
+
+  setInterval(paint, 500);
+  paint();
+})();
+</script>
+</body>
+</html>
